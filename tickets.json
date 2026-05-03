@@ -1,0 +1,117 @@
+[
+  {
+    "id": "A1B2C3D4",
+    "tytul": "Podejrzana aktywność na koncie administratora",
+    "opis": "Wykryto logowania z nieznanych adresów IP między 2:00 a 4:00 w nocy.",
+    "kategoria": "Naruszenie konta",
+    "zglaszajacy": "Jan Kowalski",
+    "priorytet": "KRYTYCZNY",
+    "poziom_liczbowy": 4,
+    "uzasadnienie": "Nieautoryzowane logowania na konto administratora stanowią poważne zagrożenie bezpieczeństwa.",
+    "zalecane_dzialanie": "Natychmiast zablokować konto i przeprowadzić audyt dostępów.",
+    "czas_reakcji": "Natychmiast",
+    "status": "Otwarte",
+    "data_utworzenia": "2025-05-01T08:23:00",
+    "data_aktualizacji": "2025-05-01T08:23:00",
+    "komentarze": [],
+    "ai_error": null
+  },
+  {
+    "id": "E5F6G7H8",
+    "tytul": "Phishing – fałszywy e-mail od działu IT",
+    "opis": "Pracownicy otrzymali wiadomość proszącą o podanie danych logowania pod pretekstem aktualizacji systemu.",
+    "kategoria": "Phishing",
+    "zglaszajacy": "Anna Nowak",
+    "priorytet": "WYSOKI",
+    "poziom_liczbowy": 3,
+    "uzasadnienie": "Atak phishingowy może prowadzić do wycieku poświadczeń wielu pracowników.",
+    "zalecane_dzialanie": "Wysłać ostrzeżenie do wszystkich pracowników i zablokować nadawcę.",
+    "czas_reaktji": "1 godzina",
+    "czas_reakcji": "1 godzina",
+    "status": "W toku",
+    "data_utworzenia": "2025-05-02T10:11:00",
+    "data_aktualizacji": "2025-05-02T11:00:00",
+    "komentarze": [
+      {
+        "autor": "Admin",
+        "tresc": "Zidentyfikowano nadawcę – domena zewnętrzna.",
+        "data": "2025-05-02T11:00:00"
+      }
+    ],
+    "ai_error": null
+  },
+  {
+    "id": "I9J0K1L2",
+    "tytul": "Wyciek danych klientów – baza danych CRM",
+    "opis": "Odkryto publicznie dostępny endpoint API zwracający dane osobowe klientów bez autoryzacji.",
+    "kategoria": "Wyciek danych",
+    "zglaszajacy": "Piotr Wiśniewski",
+    "priorytet": "KRYTYCZNY",
+    "poziom_liczbowy": 4,
+    "uzasadnienie": "Publiczny dostęp do danych osobowych narusza RODO i może skutkować poważnymi konsekwencjami prawnymi.",
+    "zalecane_dzialanie": "Natychmiast wyłączyć endpoint i przeprowadzić analizę zakresu wycieku.",
+    "czas_reakcji": "Natychmiast",
+    "status": "Otwarte",
+    "data_utworzenia": "2025-05-02T14:55:00",
+    "data_aktualizacji": "2025-05-02T14:55:00",
+    "komentarze": [],
+    "ai_error": null
+  },
+  {
+    "id": "M3N4O5P6",
+    "tytul": "Nieaktualne oprogramowanie antywirusowe na stacjach",
+    "opis": "Na 15 stacjach roboczych wykryto nieaktualne sygnatury antywirusowe (ponad 30 dni).",
+    "kategoria": "Podatność systemu",
+    "zglaszajacy": "Marta Zielińska",
+    "priorytet": "ŚREDNI",
+    "poziom_liczbowy": 2,
+    "uzasadnienie": "Nieaktualne oprogramowanie zwiększa ryzyko infekcji złośliwym oprogramowaniem.",
+    "zalecane_dzialanie": "Przeprowadzić aktualizację sygnatur na wszystkich stacjach roboczych.",
+    "czas_reakcji": "4 godziny",
+    "status": "Otwarte",
+    "data_utworzenia": "2025-05-03T09:00:00",
+    "data_aktualizacji": "2025-05-03T09:00:00",
+    "komentarze": [],
+    "ai_error": null
+  },
+  {
+    "id": "Q7R8S9T0",
+    "tytul": "Użytkownik zgłasza spowolnienie pracy komputera",
+    "opis": "Pracownik zgłasza, że komputer działa wolniej niż zwykle od kilku dni.",
+    "kategoria": "Inne",
+    "zglaszajacy": "Tomasz Kaczmarek",
+    "priorytet": "NISKI",
+    "poziom_liczbowy": 1,
+    "uzasadnienie": "Spowolnienie może być spowodowane wieloma czynnikami niezwiązanymi z bezpieczeństwem.",
+    "zalecane_dzialanie": "Przeprowadzić skan antywirusowy i sprawdzić procesy systemowe.",
+    "czas_reakcji": "24 godziny",
+    "status": "Zamknięte",
+    "data_utworzenia": "2025-04-30T15:30:00",
+    "data_aktualizacji": "2025-05-01T10:00:00",
+    "komentarze": [
+      {
+        "autor": "Admin",
+        "tresc": "Problem rozwiązany – usunięto zbędne procesy i zaktualizowano system.",
+        "data": "2025-05-01T10:00:00"
+      }
+    ],
+    "ai_error": null
+  },
+  {
+    "id": "BE83187A",
+    "tytul": "Phishing",
+    "opis": "Podejrzany mail",
+    "kategoria": "Phishing",
+    "zglaszajacy": "Marta Kowalska",
+    "priorytet": "ŚREDNI",
+    "poziom_liczbowy": 2,
+    "uzasadnienie": "Błąd klasyfikacji AI – przypisano priorytet domyślny.",
+    "zalecane_dzialanie": "Sprawdź ręcznie i zaktualizuj priorytet.",
+    "czas_reakcji": "4 godziny",
+    "status": "Otwarte",
+    "data_utworzenia": "2026-05-03T21:00:23.384976",
+    "data_aktualizacji": "2026-05-03T21:00:23.385002",
+    "komentarze": [],
+    "ai_error": "HTTP Error 401: Unauthorized"
+  }
+]

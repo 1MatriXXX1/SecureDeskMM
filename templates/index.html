@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SecureDeskMM – System Zarządzania Incydentami</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & VARS ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0d12;
+  --surface:   #111620;
+  --surface2:  #181f2e;
+  --border:    #1e2a3a;
+  --border2:   #263349;
+  --text:      #cdd8e8;
+  --text-dim:  #5f7492;
+  --accent:    #3b82f6;
+  --accent2:   #60a5fa;
+
+  --c-kryt:    #ef4444;
+  --c-kryt-bg: #1f0a0a;
+  --c-wys:     #f97316;
+  --c-wys-bg:  #1f0e06;
+  --c-sr:      #eab308;
+  --c-sr-bg:   #1a1506;
+  --c-nis:     #22c55e;
+  --c-nis-bg:  #071511;
+
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --radius: 6px;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── SCAN LINES OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── LAYOUT ─── */
+.shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 14px; font-weight: 600;
+  color: var(--accent2); letter-spacing: .05em;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.role-badge {
+  font-family: var(--mono); font-size: 11px;
+  padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--border2); color: var(--text-dim);
+}
+
+.btn-role {
+  font-family: var(--mono); font-size: 11px;
+  padding: 4px 12px; border-radius: 4px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text-dim); cursor: pointer;
+  transition: all .15s;
+}
+.btn-role:hover { border-color: var(--accent); color: var(--accent2); }
+.btn-role.active { border-color: var(--accent); color: var(--accent2); background: rgba(59,130,246,.08); }
+
+main { flex: 1; display: flex; flex-direction: column; padding: 28px 32px; gap: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+/* ─── STATS BAR ─── */
+.stats-bar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .15s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-num {
+  font-family: var(--mono); font-size: 24px; font-weight: 600; line-height: 1;
+}
+.stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+
+.stat-card.kryt .stat-num { color: var(--c-kryt); }
+.stat-card.wys .stat-num  { color: var(--c-wys); }
+.stat-card.sr  .stat-num  { color: var(--c-sr); }
+.stat-card.nis .stat-num  { color: var(--c-nis); }
+
+/* ─── TOOLBAR ─── */
+.toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+select, input[type=text] {
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  padding: 7px 12px; border-radius: var(--radius); outline: none;
+  transition: border-color .15s;
+}
+select:hover, input[type=text]:hover { border-color: var(--accent); }
+select:focus, input[type=text]:focus { border-color: var(--accent); }
+
+.btn-primary {
+  background: var(--accent); color: #fff;
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  padding: 8px 18px; border: none; border-radius: var(--radius);
+  cursor: pointer; letter-spacing: .03em;
+  transition: background .15s, transform .1s;
+  margin-left: auto;
+}
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:active { transform: scale(.97); }
+
+/* ─── TICKETS TABLE ─── */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--surface2); border-bottom: 1px solid var(--border); }
+
+th {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--text-dim); text-transform: uppercase; letter-spacing: .07em;
+  padding: 10px 16px; text-align: left; white-space: nowrap;
+  cursor: pointer; user-select: none;
+}
+th:hover { color: var(--text); }
+th .sort-icon { opacity: .4; margin-left: 4px; font-size: 10px; }
+th.active-sort { color: var(--accent2); }
+th.active-sort .sort-icon { opacity: 1; }
+
+tr.ticket-row {
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+  cursor: pointer;
+}
+tr.ticket-row:last-child { border-bottom: none; }
+tr.ticket-row:hover { background: var(--surface2); }
+
+td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+
+.ticket-id {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  background: var(--surface2); padding: 2px 7px; border-radius: 3px;
+}
+
+.ticket-title { font-weight: 500; max-width: 320px; }
+.ticket-title small { display: block; font-size: 11px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
+
+.badge-priority {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 3px; white-space: nowrap;
+}
+.badge-priority::before {
+  content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;
+}
+
+.KRYTYCZNY { color: var(--c-kryt); background: var(--c-kryt-bg); border: 1px solid rgba(239,68,68,.25); }
+.KRYTYCZNY::before { background: var(--c-kryt); box-shadow: 0 0 6px var(--c-kryt); animation: pulse 1s infinite; }
+.WYSOKI  { color: var(--c-wys); background: var(--c-wys-bg); border: 1px solid rgba(249,115,22,.25); }
+.WYSOKI::before  { background: var(--c-wys); }
+.ŚREDNI  { color: var(--c-sr);  background: var(--c-sr-bg);  border: 1px solid rgba(234,179,8,.25); }
+.ŚREDNI::before  { background: var(--c-sr); }
+.NISKI   { color: var(--c-nis); background: var(--c-nis-bg); border: 1px solid rgba(34,197,94,.25); }
+.NISKI::before   { background: var(--c-nis); }
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 4px var(--c-kryt); }
+  50%      { box-shadow: 0 0 10px var(--c-kryt); }
+}
+
+.badge-status {
+  font-family: var(--mono); font-size: 11px;
+  padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+}
+.status-Otwarte    { color: #60a5fa; background: rgba(59,130,246,.12); }
+.status-W-toku     { color: #a78bfa; background: rgba(167,139,250,.12); }
+.status-Zamknięte  { color: var(--text-dim); background: rgba(100,116,139,.1); }
+
+.td-date { font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.td-cat  { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+.level-bar {
+  display: flex; align-items: center; gap: 8px;
+}
+.level-dots { display: flex; gap: 3px; }
+.level-dots span {
+  width: 8px; height: 8px; border-radius: 2px;
+  background: var(--border2);
+}
+.level-dots span.on { background: var(--c-wys); }
+.level-1 .on { background: var(--c-nis); }
+.level-2 .on { background: var(--c-sr); }
+.level-3 .on { background: var(--c-wys); }
+.level-4 .on { background: var(--c-kryt); }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  padding: 60px; text-align: center; color: var(--text-dim);
+}
+.empty-state p { font-size: 13px; margin-top: 8px; }
+
+/* ─── MODAL OVERLAY ─── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 32px;
+  width: 100%; max-width: 660px; max-height: 90vh; overflow-y: auto;
+  transform: translateY(12px); transition: transform .2s;
+  position: relative;
+}
+.overlay.open .modal { transform: none; }
+
+.modal h2 {
+  font-family: var(--mono); font-size: 15px; font-weight: 600;
+  color: var(--accent2); margin-bottom: 24px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid .full { grid-column: 1/-1; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+.field input, .field select, .field textarea {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--sans); font-size: 13px;
+  padding: 9px 12px; border-radius: var(--radius); outline: none;
+  transition: border-color .15s; width: 100%;
+}
+.field textarea { resize: vertical; min-height: 100px; font-family: var(--sans); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+}
+
+.btn-cancel {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text-dim); font-family: var(--mono); font-size: 12px;
+  padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+  transition: all .15s;
+}
+.btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+.btn-submit {
+  background: var(--accent); color: #fff;
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  padding: 8px 20px; border: none; border-radius: var(--radius);
+  cursor: pointer; transition: background .15s;
+}
+.btn-submit:hover { background: var(--accent2); }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-close-modal {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--text-dim);
+  font-size: 18px; cursor: pointer; line-height: 1;
+  transition: color .15s; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-close-modal:hover { color: var(--text); }
+
+/* ─── DETAIL MODAL ─── */
+.detail-section { margin-bottom: 20px; }
+.detail-section h3 {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px;
+}
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-item { background: var(--surface2); border-radius: 4px; padding: 10px 12px; }
+.detail-item .key { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.detail-item .val { font-size: 13px; }
+
+.ai-box {
+  background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2);
+  border-radius: 6px; padding: 16px; margin-bottom: 16px;
+}
+.ai-box h3 { font-family: var(--mono); font-size: 11px; color: var(--accent2); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+.ai-field { margin-bottom: 8px; }
+.ai-field .k { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+.ai-field .v { font-size: 13px; }
+
+.comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.comment-item {
+  background: var(--surface2); border-radius: 4px; padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+}
+.comment-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+.comment-text { font-size: 13px; }
+
+/* ─── LOADING ─── */
+.loading {
+  text-align: center; padding: 40px;
+  font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+}
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ai-thinking {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+  border-radius: 6px; padding: 14px 16px; margin-top: 12px;
+  font-family: var(--mono); font-size: 12px; color: var(--accent2);
+}
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 12px 20px;
+  font-family: var(--mono); font-size: 12px;
+  transform: translateY(100px); opacity: 0; transition: all .25s;
+  z-index: 9000;
+}
+.toast.show { transform: none; opacity: 1; }
+.toast.success { border-color: var(--c-nis); color: var(--c-nis); }
+.toast.error   { border-color: var(--c-kryt); color: var(--c-kryt); }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  .stats-bar { grid-template-columns: repeat(4, 1fr); }
+  main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚑</div>
+    <span>SECURE<span style="color:var(--text-dim)">DESK</span></span>
+  </div>
+  <div class="header-right">
+    <span class="role-badge" id="roleBadge"></span>
+    <button class="btn-role" id="btnPracownik" onclick="switchRole('pracownik')">Pracownik</button>
+    <button class="btn-role" id="btnAdmin"     onclick="switchRole('administrator')">Administrator</button>
+  </div>
+</header>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card"><span class="stat-num" id="s-total">–</span><span class="stat-label">Wszystkie</span></div>
+    <div class="stat-card kryt"><span class="stat-num" id="s-kryt">–</span><span class="stat-label">Krytyczne</span></div>
+    <div class="stat-card wys"><span class="stat-num" id="s-wys">–</span><span class="stat-label">Wysokie</span></div>
+    <div class="stat-card sr"><span class="stat-num" id="s-sr">–</span><span class="stat-label">Średnie</span></div>
+    <div class="stat-card nis"><span class="stat-num" id="s-nis">–</span><span class="stat-label">Niskie</span></div>
+    <div class="stat-card"><span class="stat-num" id="s-open">–</span><span class="stat-label">Otwarte</span></div>
+    <div class="stat-card"><span class="stat-num" id="s-closed">–</span><span class="stat-label">Zamknięte</span></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <select id="filterPriority" onchange="loadTickets()">
+      <option value="">Priorytet: Wszystkie</option>
+      <option value="KRYTYCZNY">🔴 Krytyczny</option>
+      <option value="WYSOKI">🟠 Wysoki</option>
+      <option value="ŚREDNI">🟡 Średni</option>
+      <option value="NISKI">🟢 Niski</option>
+    </select>
+    <select id="filterStatus" onchange="loadTickets()">
+      <option value="">Status: Wszystkie</option>
+      <option value="Otwarte">Otwarte</option>
+      <option value="W toku">W toku</option>
+      <option value="Zamknięte">Zamknięte</option>
+    </select>
+    <select id="filterCategory" onchange="loadTickets()">
+      <option value="">Kategoria: Wszystkie</option>
+      <option value="Phishing">Phishing</option>
+      <option value="Wyciek danych">Wyciek danych</option>
+      <option value="Naruszenie konta">Naruszenie konta</option>
+      <option value="Malware">Malware</option>
+      <option value="Atak DDoS">Atak DDoS</option>
+      <option value="Nieautoryzowany dostęp">Nieautoryzowany dostęp</option>
+      <option value="Podatność systemu">Podatność systemu</option>
+      <option value="Inne">Inne</option>
+    </select>
+    <select id="sortBy" onchange="loadTickets()">
+      <option value="priorytet">Sortuj: Priorytet</option>
+      <option value="data_utworzenia">Sortuj: Data</option>
+      <option value="tytul">Sortuj: Tytuł</option>
+    </select>
+    <select id="sortOrder" onchange="loadTickets()">
+      <option value="desc">Malejąco</option>
+      <option value="asc">Rosnąco</option>
+    </select>
+    <button class="btn-primary" onclick="openNewTicket()" id="btnNewTicket">+ Nowe zgłoszenie</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div id="tableContainer"></div>
+  </div>
+
+</main>
+</div>
+
+<!-- ══ MODAL: NOWE ZGŁOSZENIE ══ -->
+<div class="overlay" id="newModal">
+  <div class="modal">
+    <button class="btn-close-modal" onclick="closeNewModal()">✕</button>
+    <h2>⚑ Nowe zgłoszenie incydentu</h2>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Tytuł incydentu *</label>
+        <input type="text" id="fTytul" placeholder="Krótki opis problemu..."/>
+      </div>
+      <div class="field">
+        <label>Kategoria *</label>
+        <select id="fKategoria">
+          <option value="">– wybierz –</option>
+          <option>Phishing</option>
+          <option>Wyciek danych</option>
+          <option>Naruszenie konta</option>
+          <option>Malware</option>
+          <option>Atak DDoS</option>
+          <option>Nieautoryzowany dostęp</option>
+          <option>Podatność systemu</option>
+          <option>Inne</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Imię i nazwisko *</label>
+        <input type="text" id="fZglaszajacy" placeholder="Jan Kowalski"/>
+      </div>
+      <div class="field full">
+        <label>Szczegółowy opis *</label>
+        <textarea id="fOpis" placeholder="Opisz szczegółowo co się wydarzyło, kiedy, na jakich systemach..."></textarea>
+      </div>
+    </div>
+    <div id="aiThinking" style="display:none">
+      <div class="ai-thinking"><span class="spinner"></span>Sztuczna inteligencja analizuje i klasyfikuje incydent...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeNewModal()">Anuluj</button>
+      <button class="btn-submit" id="btnSubmit" onclick="submitTicket()">Wyślij zgłoszenie</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: SZCZEGÓŁY TICKETU ══ -->
+<div class="overlay" id="detailModal">
+  <div class="modal" style="max-width:700px">
+    <button class="btn-close-modal" onclick="closeDetailModal()">✕</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+let currentRole = '{{ role }}';
+let currentSort = 'priorytet';
+let currentOrder = 'desc';
+
+// ─── ROLE ───
+function switchRole(role) {
+  fetch(`/set-role/${role}`).then(() => { currentRole = role; updateRoleUI(); loadTickets(); });
+}
+function updateRoleUI() {
+  document.getElementById('roleBadge').textContent = currentRole === 'administrator' ? '🛡 Administrator' : '👤 Pracownik';
+  document.getElementById('btnPracownik').classList.toggle('active', currentRole === 'pracownik');
+  document.getElementById('btnAdmin').classList.toggle('active', currentRole === 'administrator');
+  document.getElementById('btnNewTicket').style.display = currentRole === 'pracownik' ? '' : 'none';
+}
+
+// ─── STATS ───
+async function loadStats() {
+  const r = await fetch('/api/stats');
+  const s = await r.json();
+  document.getElementById('s-total').textContent = s.total;
+  document.getElementById('s-kryt').textContent  = s.krytyczne;
+  document.getElementById('s-wys').textContent   = s.wysokie;
+  document.getElementById('s-sr').textContent    = s.srednie;
+  document.getElementById('s-nis').textContent   = s.niskie;
+  document.getElementById('s-open').textContent  = s.otwarte;
+  document.getElementById('s-closed').textContent= s.zamkniete;
+}
+
+// ─── TICKETS ───
+async function loadTickets() {
+  const priority = document.getElementById('filterPriority').value;
+  const status   = document.getElementById('filterStatus').value;
+  const category = document.getElementById('filterCategory').value;
+  const sort     = document.getElementById('sortBy').value;
+  const order    = document.getElementById('sortOrder').value;
+
+  const params = new URLSearchParams({ sort, order });
+  if (priority) params.set('priorytet', priority);
+  if (status)   params.set('status', status);
+  if (category) params.set('kategoria', category);
+
+  const container = document.getElementById('tableContainer');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>Ładowanie danych...</div>';
+
+  const r = await fetch('/api/tickets?' + params);
+  const tickets = await r.json();
+
+  if (!tickets.length) {
+    container.innerHTML = '<div class="empty-state"><div style="font-size:32px">✓</div><p>Brak zgłoszeń spełniających kryteria</p></div>';
+    return;
+  }
+
+  const isAdmin = currentRole === 'administrator';
+
+  let html = `<table>
+    <thead><tr>
+      <th>ID</th>
+      <th onclick="sortBy('tytul')">INCYDENT <span class="sort-icon">⇅</span></th>
+      <th onclick="sortBy('priorytet')" class="${sort==='priorytet'?'active-sort':''}">PRIORYTET <span class="sort-icon">${sort==='priorytet'?(order==='desc'?'↓':'↑'):'⇅'}</span></th>
+      <th>POZIOM</th>
+      <th>KATEGORIA</th>
+      <th>STATUS</th>
+      <th onclick="sortBy('data_utworzenia')" class="${sort==='data_utworzenia'?'active-sort':''}">DATA <span class="sort-icon">${sort==='data_utworzenia'?(order==='desc'?'↓':'↑'):'⇅'}</span></th>
+      ${isAdmin ? '<th>AKCJA</th>' : ''}
+    </tr></thead>
+    <tbody>`;
+
+  for (const t of tickets) {
+    const date = new Date(t.data_utworzenia).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const statusClass = 'status-' + t.status.replace(/ /g,'-');
+    const lvl = t.poziom_liczbowy || 1;
+    const dots = [1,2,3,4].map(i => `<span class="${i<=lvl?'on':''}"></span>`).join('');
+
+    html += `<tr class="ticket-row" onclick="openDetail('${t.id}')">
+      <td><span class="ticket-id">#${t.id}</span></td>
+      <td class="ticket-title">${escH(t.tytul)}<small>${escH(t.zglaszajacy)}</small></td>
+      <td><span class="badge-priority ${t.priorytet}">${t.priorytet}</span></td>
+      <td><div class="level-bar"><div class="level-dots level-${lvl}">${dots}</div></div></td>
+      <td class="td-cat">${escH(t.kategoria)}</td>
+      <td><span class="badge-status ${statusClass}">${t.status}</span></td>
+      <td class="td-date">${date}</td>
+      ${isAdmin ? `<td onclick="event.stopPropagation()">
+        <select onchange="updateStatus('${t.id}', this.value)" style="font-size:11px;padding:4px 8px">
+          <option ${t.status==='Otwarte'?'selected':''}>Otwarte</option>
+          <option ${t.status==='W toku'?'selected':''}>W toku</option>
+          <option ${t.status==='Zamknięte'?'selected':''}>Zamknięte</option>
+        </select>
+      </td>` : ''}
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function sortBy(field) {
+  const sortEl = document.getElementById('sortBy');
+  const orderEl = document.getElementById('sortOrder');
+  if (sortEl.value === field) {
+    orderEl.value = orderEl.value === 'desc' ? 'asc' : 'desc';
+  } else {
+    sortEl.value = field;
+    orderEl.value = 'desc';
+  }
+  loadTickets();
+}
+
+// ─── NEW TICKET ───
+function openNewTicket() {
+  document.getElementById('newModal').classList.add('open');
+}
+function closeNewModal() {
+  document.getElementById('newModal').classList.remove('open');
+  document.getElementById('fTytul').value = '';
+  document.getElementById('fOpis').value = '';
+  document.getElementById('fKategoria').value = '';
+  document.getElementById('fZglaszajacy').value = '';
+  document.getElementById('aiThinking').style.display = 'none';
+  document.getElementById('btnSubmit').disabled = false;
+}
+
+async function submitTicket() {
+  const tytul = document.getElementById('fTytul').value.trim();
+  const opis  = document.getElementById('fOpis').value.trim();
+  const kat   = document.getElementById('fKategoria').value;
+  const zgl   = document.getElementById('fZglaszajacy').value.trim();
+
+  if (!tytul || !opis || !kat || !zgl) { showToast('Wypełnij wszystkie wymagane pola', 'error'); return; }
+
+  document.getElementById('btnSubmit').disabled = true;
+  document.getElementById('aiThinking').style.display = 'block';
+
+  try {
+    const r = await fetch('/api/tickets', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ tytul, opis, kategoria: kat, zglaszajacy: zgl })
+    });
+    const ticket = await r.json();
+    closeNewModal();
+    showToast(`Zgłoszenie #${ticket.id} utworzone – priorytet: ${ticket.priorytet}`, 'success');
+    await loadTickets();
+    await loadStats();
+  } catch(e) {
+    showToast('Błąd podczas tworzenia zgłoszenia', 'error');
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('aiThinking').style.display = 'none';
+  }
+}
+
+// ─── DETAIL ───
+async function openDetail(id) {
+  const r = await fetch('/api/tickets');
+  const tickets = await r.json();
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+
+  const isAdmin = currentRole === 'administrator';
+  const date = new Date(t.data_utworzenia).toLocaleString('pl-PL');
+  const dateU = new Date(t.data_aktualizacji).toLocaleString('pl-PL');
+  const statusClass = 'status-' + t.status.replace(/ /g,'-');
+
+  let comments = '';
+  if (t.komentarze && t.komentarze.length) {
+    comments = t.komentarze.map(c => `
+      <div class="comment-item">
+        <div class="comment-meta">${escH(c.autor)} · ${new Date(c.data).toLocaleString('pl-PL')}</div>
+        <div class="comment-text">${escH(c.tresc)}</div>
+      </div>`).join('');
+  }
+
+  const adminActions = isAdmin ? `
+    <div class="detail-section">
+      <h3>Akcje administratora</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="detailStatus" style="padding:7px 12px;font-size:12px">
+          <option ${t.status==='Otwarte'?'selected':''}>Otwarte</option>
+          <option ${t.status==='W toku'?'selected':''}>W toku</option>
+          <option ${t.status==='Zamknięte'?'selected':''}>Zamknięte</option>
+        </select>
+        <select id="detailPriority" style="padding:7px 12px;font-size:12px">
+          <option ${t.priorytet==='KRYTYCZNY'?'selected':''}>KRYTYCZNY</option>
+          <option ${t.priorytet==='WYSOKI'?'selected':''}>WYSOKI</option>
+          <option ${t.priorytet==='ŚREDNI'?'selected':''}>ŚREDNI</option>
+          <option ${t.priorytet==='NISKI'?'selected':''}>NISKI</option>
+        </select>
+        <button class="btn-submit" onclick="saveDetailChanges('${id}')">Zapisz zmiany</button>
+      </div>
+      <div class="field">
+        <label>Dodaj komentarz</label>
+        <textarea id="detailComment" placeholder="Opisz podjęte działania..."></textarea>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn-submit" onclick="addComment('${id}')">Dodaj komentarz</button>
+      </div>
+    </div>` : '';
+
+  document.getElementById('detailContent').innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px">
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:6px">#${t.id}</div>
+        <h2 style="font-size:17px;font-weight:600;color:var(--text)">${escH(t.tytul)}</h2>
+      </div>
+      <span class="badge-priority ${t.priorytet}" style="flex-shrink:0">${t.priorytet}</span>
+    </div>
+
+    <div class="ai-box">
+      <h3>🤖 Analiza AI – klasyfikacja incydentu</h3>
+      <div class="ai-field"><div class="k">Uzasadnienie priorytetu</div><div class="v">${escH(t.uzasadnienie||'–')}</div></div>
+      <div class="ai-field"><div class="k">Zalecane działanie</div><div class="v">${escH(t.zalecane_dzialanie||'–')}</div></div>
+      <div class="ai-field"><div class="k">Wymagany czas reakcji</div><div class="v" style="color:var(--c-wys)">${escH(t.czas_reakcji||'–')}</div></div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Informacje ogólne</h3>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="key">Kategoria</div><div class="val">${escH(t.kategoria)}</div></div>
+        <div class="detail-item"><div class="key">Status</div><div class="val"><span class="badge-status ${statusClass}">${t.status}</span></div></div>
+        <div class="detail-item"><div class="key">Zgłaszający</div><div class="val">${escH(t.zglaszajacy)}</div></div>
+        <div class="detail-item"><div class="key">Poziom liczbowy</div><div class="val">${t.poziom_liczbowy}/4</div></div>
+        <div class="detail-item"><div class="key">Data zgłoszenia</div><div class="val" style="font-family:var(--mono);font-size:12px">${date}</div></div>
+        <div class="detail-item"><div class="key">Ostatnia aktualizacja</div><div class="val" style="font-family:var(--mono);font-size:12px">${dateU}</div></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Opis incydentu</h3>
+      <div style="background:var(--surface2);border-radius:4px;padding:12px 14px;font-size:13px;line-height:1.6">${escH(t.opis)}</div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Komentarze (${(t.komentarze||[]).length})</h3>
+      <div class="comments-list">${comments || '<div style="color:var(--text-dim);font-size:13px">Brak komentarzy</div>'}</div>
+    </div>
+
+    ${adminActions}
+  `;
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+async function saveDetailChanges(id) {
+  const status   = document.getElementById('detailStatus').value;
+  const priorytet = document.getElementById('detailPriority').value;
+  await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status, priorytet })
+  });
+  showToast('Ticket zaktualizowany', 'success');
+  closeDetailModal();
+  await loadTickets();
+  await loadStats();
+}
+
+async function addComment(id) {
+  const tresc = document.getElementById('detailComment').value.trim();
+  if (!tresc) { showToast('Wpisz treść komentarza', 'error'); return; }
+  await fetch(`/api/tickets/${id}/komentarz`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ autor: 'Administrator', tresc })
+  });
+  showToast('Komentarz dodany', 'success');
+  closeDetailModal();
+  await loadTickets();
+}
+
+async function updateStatus(id, status) {
+  await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status })
+  });
+  showToast('Status zaktualizowany', 'success');
+  await loadStats();
+}
+
+// ─── HELPERS ───
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+document.getElementById('newModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewModal(); });
+document.getElementById('detailModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeDetailModal(); });
+
+// ─── INIT ───
+updateRoleUI();
+loadStats();
+loadTickets();
+</script>
+</body>
+</html>
